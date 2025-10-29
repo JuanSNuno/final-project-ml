@@ -1,0 +1,12 @@
+{
+  "project": "final-project-ml",
+  "data_path": "Base_de_datos.csv",
+  "model": {
+    "name": "heuristic_model",
+    "version": "0.1"
+  },
+  "training": {
+    "test_size": 0.2,
+    "random_state": 42
+  }
+}
