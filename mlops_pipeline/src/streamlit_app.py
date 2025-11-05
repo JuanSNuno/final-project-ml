@@ -124,17 +124,46 @@ def calculate_chi_square(reference, current):
 @st.cache_data
 def load_data():
     """Cargar y preparar datos"""
-    config_path = "../../config.json"
+    import pathlib
+    
+    # Obtener la ruta del directorio actual del script
+    script_dir = pathlib.Path(__file__).parent.parent.parent  # Sube a final-project-ml/
+    
+    # Intentar cargar desde config.json
+    config_path = script_dir / "config.json"
     data_path = None
     
-    if os.path.exists(config_path):
-        with open(config_path, 'r') as f:
-            config = json.load(f)
-            data_path = config.get('data_path', 'alzheimers_disease_data.csv')
-    else:
-        data_path = "../../alzheimers_disease_data.csv"
+    if config_path.exists():
+        try:
+            with open(config_path, 'r') as f:
+                config = json.load(f)
+                data_filename = config.get('data_path', 'alzheimers_disease_data.csv')
+                data_path = script_dir / data_filename
+        except Exception:
+            pass
     
-    df_full = pd.read_csv(data_path)
+    # Si no se encontró en config, buscar directamente
+    if data_path is None or not pathlib.Path(data_path).exists():
+        # Buscar en la raíz del proyecto
+        possible_paths = [
+            script_dir / "alzheimers_disease_data.csv",
+            script_dir / "Base_de_datos.csv",
+        ]
+        
+        for path in possible_paths:
+            if path.exists():
+                data_path = path
+                break
+    
+    if data_path is None or not pathlib.Path(data_path).exists():
+        st.error(f"❌ No se encontró el archivo de datos. Se buscó en: {script_dir}")
+        st.stop()
+    
+    try:
+        df_full = pd.read_csv(data_path)
+    except Exception as e:
+        st.error(f"❌ Error al cargar datos: {e}")
+        st.stop()
     
     # Simular datos históricos y actuales
     split_point = int(len(df_full) * 0.8)
