@@ -1,6 +1,6 @@
 {
   "project": "final-project-ml",
-  "data_path": "../../alzheimers_disease_data.csv",
+  "data_path": "alzheimers_disease_data.csv",
   "model": {
     "name": "model",
     "version": "0.1"

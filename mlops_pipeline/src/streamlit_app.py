@@ -122,14 +122,64 @@ def calculate_chi_square(reference, current):
 # ==============================================================================
 
 @st.cache_data
-def load_data():
-    """Cargar y preparar datos"""
+def load_monitoring_results():
+    """Cargar resultados del monitoreo desde archivos generados"""
     import pathlib
     
-    # Obtener la ruta del directorio actual del script
-    script_dir = pathlib.Path(__file__).parent.parent.parent  # Sube a final-project-ml/
+    script_dir = pathlib.Path(__file__).parent.parent.parent
+    monitoring_dir = script_dir / "monitoring_results"
     
-    # Intentar cargar desde config.json
+    # Cargar reporte de drift (CSV)
+    drift_report_path = monitoring_dir / "drift_report.csv"
+    
+    if not drift_report_path.exists():
+        st.warning(f"⚠️ No se encontró el reporte de drift: {drift_report_path}")
+        st.info("💡 Ejecuta primero model_monitoring.py para generar los reportes")
+        return None, None
+    
+    try:
+        drift_results = pd.read_csv(drift_report_path)
+    except Exception as e:
+        st.error(f"❌ Error al cargar reporte de drift: {e}")
+        return None, None
+    
+    # Cargar resumen (JSON)
+    drift_summary_path = monitoring_dir / "drift_summary.json"
+    drift_summary = None
+    
+    if drift_summary_path.exists():
+        try:
+            with open(drift_summary_path, 'r') as f:
+                drift_summary = json.load(f)
+        except Exception as e:
+            st.warning(f"⚠️ No se pudo cargar el resumen: {e}")
+    
+    return drift_results, drift_summary
+
+
+@st.cache_data
+def load_data():
+    """Cargar datos originales para visualización complementaria"""
+    import pathlib
+    
+    script_dir = pathlib.Path(__file__).parent.parent.parent
+    
+    # Intentar cargar datos limpios
+    cleaned_data_path = script_dir / "data" / "processed" / "cleaned_data.csv"
+    
+    if cleaned_data_path.exists():
+        try:
+            df_full = pd.read_csv(cleaned_data_path)
+            # Simular datos históricos y actuales para gráficos
+            split_point = int(len(df_full) * 0.8)
+            df_reference = df_full.iloc[:split_point].copy()
+            df_current = df_full.iloc[split_point:].copy()
+            return df_reference, df_current, df_full
+        except Exception as e:
+            st.error(f"❌ Error al cargar datos: {e}")
+            return None, None, None
+    
+    # Fallback a datos originales
     config_path = script_dir / "config.json"
     data_path = None
     
@@ -142,35 +192,29 @@ def load_data():
         except Exception:
             pass
     
-    # Si no se encontró en config, buscar directamente
     if data_path is None or not pathlib.Path(data_path).exists():
-        # Buscar en la raíz del proyecto
         possible_paths = [
             script_dir / "alzheimers_disease_data.csv",
             script_dir / "Base_de_datos.csv",
         ]
-        
         for path in possible_paths:
             if path.exists():
                 data_path = path
                 break
     
     if data_path is None or not pathlib.Path(data_path).exists():
-        st.error(f"❌ No se encontró el archivo de datos. Se buscó en: {script_dir}")
-        st.stop()
+        st.error(f"❌ No se encontró el archivo de datos")
+        return None, None, None
     
     try:
         df_full = pd.read_csv(data_path)
+        split_point = int(len(df_full) * 0.8)
+        df_reference = df_full.iloc[:split_point].copy()
+        df_current = df_full.iloc[split_point:].copy()
+        return df_reference, df_current, df_full
     except Exception as e:
         st.error(f"❌ Error al cargar datos: {e}")
-        st.stop()
-    
-    # Simular datos históricos y actuales
-    split_point = int(len(df_full) * 0.8)
-    df_reference = df_full.iloc[:split_point].copy()
-    df_current = df_full.iloc[split_point:].copy()
-    
-    return df_reference, df_current, df_full
+        return None, None, None
 
 
 # ==============================================================================
@@ -252,14 +296,68 @@ def analyze_drift(df_reference, df_current, exclude_cols=['PatientID', 'DoctorIn
 # INTERFAZ PRINCIPAL
 # ==============================================================================
 
-# Cargar datos
-with st.spinner('Cargando datos...'):
-    df_reference, df_current, df_full = load_data()
-    drift_df = analyze_drift(df_reference, df_current)
+# Cargar resultados del monitoreo
+with st.spinner('Cargando resultados del monitoreo...'):
+    drift_results, drift_summary = load_monitoring_results()
+    
+    # Si hay resultados de monitoreo, usarlos
+    if drift_results is not None and 'drift_level' in drift_results.columns:
+        st.success("✅ Resultados del monitoreo cargados correctamente")
+        
+        # Mapear columnas del monitoreo a formato esperado por la app
+        drift_df = drift_results.copy()
+        
+        # Crear columna de alerta basada en drift_level
+        alert_mapping = {
+            'Sin drift': '✅ OK',
+            'Drift moderado': '⚠️ MODERADO',
+            'Drift significativo': '🚨 CRÍTICO'
+        }
+        drift_df['Alerta'] = drift_df['drift_level'].map(alert_mapping)
+        
+        # Renombrar columnas para compatibilidad
+        drift_df = drift_df.rename(columns={
+            'feature': 'Variable',
+            'type': 'Tipo',
+            'ks_statistic': 'KS_Statistic',
+            'ks_pvalue': 'KS_PValue',
+            'js_divergence': 'JS_Divergence',
+            'chi2': 'Chi2',
+            'chi2_pvalue': 'Chi2_PValue',
+            'cramers_v': 'Cramers_V',
+            'psi': 'PSI'
+        })
+        
+        # Ajustar tipos
+        drift_df['Tipo'] = drift_df['Tipo'].replace({'numeric': 'Numérica', 'categorical': 'Categórica'})
+        
+        # Cargar datos originales para visualización
+        df_reference, df_current, df_full = load_data()
+        
+    else:
+        # Modo legacy: calcular drift en tiempo real
+        st.info("🔄 No se encontraron reportes de monitoreo. Calculando drift en tiempo real...")
+        st.warning("💡 Ejecuta primero: `python mlops_pipeline/src/model_monitoring.py`")
+        
+        df_reference, df_current, df_full = load_data()
+        
+        if df_reference is None:
+            st.error("❌ No se pudieron cargar los datos")
+            st.stop()
+        
+        drift_df = analyze_drift(df_reference, df_current)
+        drift_summary = None
 
 # Sidebar - Controles
 st.sidebar.header("⚙️ Configuración")
 st.sidebar.markdown("---")
+
+# Mostrar información del monitoreo si está disponible
+if drift_summary:
+    st.sidebar.subheader("📅 Información del Monitoreo")
+    st.sidebar.write(f"**Timestamp:** {drift_summary.get('timestamp', 'N/A')[:19]}")
+    st.sidebar.write(f"**Total Features:** {drift_summary.get('total_features', 0)}")
+    st.sidebar.markdown("---")
 
 # Filtros
 st.sidebar.subheader("Filtros")
@@ -285,8 +383,12 @@ drift_filtered = drift_df[
 st.sidebar.markdown("---")
 st.sidebar.subheader("📊 Información del Dataset")
 st.sidebar.metric("Total de Variables", len(drift_df))
-st.sidebar.metric("Datos de Referencia", len(df_reference))
-st.sidebar.metric("Datos Actuales", len(df_current))
+
+if df_reference is not None and df_current is not None:
+    st.sidebar.metric("Datos de Referencia", len(df_reference))
+    st.sidebar.metric("Datos Actuales", len(df_current))
+else:
+    st.sidebar.info("Datos de referencia cargados desde monitoreo")
 
 # ==============================================================================
 # MÉTRICAS PRINCIPALES
@@ -479,36 +581,40 @@ with tab2:
         
         else:  # Categórica
             with col3:
-                st.metric("Chi2", f"{var_info['Chi2']:.4f}")
+                st.metric("Chi2", f"{var_info['Chi2']:.4f}" if pd.notna(var_info['Chi2']) else "N/A")
             with col4:
-                st.metric("Cramér's V", f"{var_info['Cramers_V']:.4f}")
+                st.metric("Cramér's V", f"{var_info['Cramers_V']:.4f}" if pd.notna(var_info['Cramers_V']) else "N/A")
             
-            # Gráfico de barras
-            fig, ax = plt.subplots(figsize=(12, 6))
-            
-            ref_data = df_reference[selected_var].value_counts(normalize=True)
-            cur_data = df_current[selected_var].value_counts(normalize=True)
-            
-            all_cats = list(set(ref_data.index) | set(cur_data.index))
-            x = np.arange(len(all_cats))
-            width = 0.35
-            
-            ref_vals = [ref_data.get(cat, 0) for cat in all_cats]
-            cur_vals = [cur_data.get(cat, 0) for cat in all_cats]
-            
-            ax.bar(x - width/2, ref_vals, width, label='Referencia', alpha=0.8, color='blue')
-            ax.bar(x + width/2, cur_vals, width, label='Actual', alpha=0.8, color='red')
-            
-            ax.set_xlabel('Categorías', fontweight='bold')
-            ax.set_ylabel('Frecuencia Relativa', fontweight='bold')
-            ax.set_title(f'Distribución: {selected_var}', fontsize=12, fontweight='bold')
-            ax.set_xticks(x)
-            ax.set_xticklabels(all_cats, rotation=45, ha='right')
-            ax.legend()
-            ax.grid(axis='y', alpha=0.3)
-            
-            plt.tight_layout()
-            st.pyplot(fig)
+            # Verificar si hay datos para graficar
+            if df_reference is not None and df_current is not None and selected_var in df_reference.columns and selected_var in df_current.columns:
+                # Gráfico de barras
+                fig, ax = plt.subplots(figsize=(12, 6))
+                
+                ref_data = df_reference[selected_var].value_counts(normalize=True)
+                cur_data = df_current[selected_var].value_counts(normalize=True)
+                
+                all_cats = list(set(ref_data.index) | set(cur_data.index))
+                x = np.arange(len(all_cats))
+                width = 0.35
+                
+                ref_vals = [ref_data.get(cat, 0) for cat in all_cats]
+                cur_vals = [cur_data.get(cat, 0) for cat in all_cats]
+                
+                ax.bar(x - width/2, ref_vals, width, label='Referencia', alpha=0.8, color='blue')
+                ax.bar(x + width/2, cur_vals, width, label='Actual', alpha=0.8, color='red')
+                
+                ax.set_xlabel('Categorías', fontweight='bold')
+                ax.set_ylabel('Frecuencia Relativa', fontweight='bold')
+                ax.set_title(f'Distribución: {selected_var}', fontsize=12, fontweight='bold')
+                ax.set_xticks(x)
+                ax.set_xticklabels(all_cats, rotation=45, ha='right')
+                ax.legend()
+                ax.grid(axis='y', alpha=0.3)
+                
+                plt.tight_layout()
+                st.pyplot(fig)
+            else:
+                st.info("📊 Datos de distribución no disponibles (ejecuta el pipeline completo para generar gráficos)")
     else:
         st.info("No hay variables que cumplan con los filtros seleccionados.")
 

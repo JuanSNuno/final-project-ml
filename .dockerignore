@@ -1,0 +1,53 @@
+# Archivos y directorios a excluir de la imagen Docker
+
+# Datos
+data/
+*.csv
+
+# Notebooks
+*.ipynb
+.ipynb_checkpoints/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Git
+.git/
+.gitignore
+
+# Documentación
+*.md
+directrices*.md
+Directriz*.md
+
+# Monitoring results (generados en runtime)
+monitoring_results/
+
+# Temporales
+*.log
+.pytest_cache/
+.coverage
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# MacOS
+.DS_Store
