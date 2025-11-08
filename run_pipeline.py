@@ -107,7 +107,7 @@ Ejemplos de uso:
     
     # Definir rutas de scripts
     project_root = Path(__file__).parent
-    src_dir = project_root / "mlops_pipeline" / "src"
+    src_dir = project_root / "mlops_pipeline" / "src" / "Scripts"
     
     scripts = [
         (src_dir / "data_processing.py", "PASO 1: Procesamiento de Datos"),

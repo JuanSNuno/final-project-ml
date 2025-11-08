@@ -22,7 +22,7 @@ def load_config():
             return json.load(f)
     else:
         return {
-            "data_path": "alzheimers_disease_data.csv",
+            "data_path": "../alzheimers_disease_data.csv",
             "training": {"test_size": 0.2, "random_state": 42}
         }
 

@@ -25,8 +25,21 @@ import uvicorn
 # ==============================================================================
 
 # Definir rutas de artefactos
-PROJECT_ROOT = Path(__file__).parent.parent.parent
-ARTIFACTS_DIR = PROJECT_ROOT / "artifacts"
+# Buscar en múltiples ubicaciones posibles (local development y Docker)
+POSSIBLE_ARTIFACT_DIRS = [
+    Path(__file__).parent.parent.parent / "artifacts",  # Desarrollo local
+    Path("/app/artifacts"),  # Docker
+]
+
+ARTIFACTS_DIR = None
+for dir_path in POSSIBLE_ARTIFACT_DIRS:
+    if dir_path.exists():
+        ARTIFACTS_DIR = dir_path
+        break
+
+if ARTIFACTS_DIR is None:
+    ARTIFACTS_DIR = POSSIBLE_ARTIFACT_DIRS[0]  # Fallback
+
 PREPROCESSOR_PATH = ARTIFACTS_DIR / "preprocessor.joblib"
 MODEL_PATH = ARTIFACTS_DIR / "best_model.joblib"
 METADATA_PATH = ARTIFACTS_DIR / "model_metadata.json"
@@ -34,6 +47,7 @@ METADATA_PATH = ARTIFACTS_DIR / "model_metadata.json"
 # Cargar artefactos al inicio
 try:
     print("🔄 Cargando artefactos del modelo...")
+    print(f"   Buscando en: {ARTIFACTS_DIR}")
     preprocessor = joblib.load(PREPROCESSOR_PATH)
     model = joblib.load(MODEL_PATH)
     
@@ -48,6 +62,8 @@ try:
     print(f"✅ Modelo: {model_metadata.get('model_name', 'Unknown')}")
 except FileNotFoundError as e:
     print(f"❌ Error: No se encontraron los artefactos necesarios.")
+    print(f"   Intenté en: {ARTIFACTS_DIR}")
+    print(f"   Error específico: {e}")
     print(f"   Por favor, ejecuta primero todo el pipeline (data_processing.py, ft_engineering.py, model_training_evaluation.py)")
     raise
 

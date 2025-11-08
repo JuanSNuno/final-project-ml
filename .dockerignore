@@ -1,10 +1,10 @@
 # Archivos y directorios a excluir de la imagen Docker
 
-# Datos
-data/
-*.csv
+# Datos crudos y procesados (excluir solo los datos, no los artefactos)
+mlops_pipeline/data/processed/*.csv
 
-# Notebooks
+# Notebooks (no necesarios en producción)
+mlops_pipeline/src/notebboks/
 *.ipynb
 .ipynb_checkpoints/
 
@@ -19,6 +19,7 @@ __pycache__/
 venv/
 env/
 ENV/
+.venv/
 
 # IDE
 .vscode/
@@ -31,13 +32,13 @@ ENV/
 .git/
 .gitignore
 
-# Documentación
+# Documentación (no necesaria en producción)
 *.md
 directrices*.md
 Directriz*.md
 
 # Monitoring results (generados en runtime)
-monitoring_results/
+mlops_pipeline/monitoring_results/
 
 # Temporales
 *.log
@@ -48,6 +49,17 @@ monitoring_results/
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+
+# Dataset original (muy pesado)
+alzheimers_disease_data.csv
+PROYECTO\ FINAL\ ML.pdf
+
+# Otros scripts no necesarios
+run_pipeline.py
+setup_monitoring.py
+test_api.py
+
+
 
 # MacOS
 .DS_Store
