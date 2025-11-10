@@ -1,15 +1,5 @@
 {
-    "model_name": "Gradient Boosting",
-    "model_type": "GradientBoostingClassifier",
-    "training_date": "2025-11-09 19:14:55",
-    "features_count": 38,
-    "training_samples": 1719,
-    "test_samples": 430,
-    "metrics": {
-        "test_accuracy": 0.9465116279069767,
-        "f1_score": 0.9464713779632316,
-        "precision": 0.9464422396989977,
-        "recall": 0.9465116279069767,
-        "roc_auc": 0.9516991669822037
-    }
+    "model_name": "Random Forest",
+    "model_type": "RandomForestClassifier",
+    "training_date": "2025-11-10 13:28:35"
 }

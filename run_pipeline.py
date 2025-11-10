@@ -1,14 +1,14 @@
 """
 run_pipeline.py
-Script maestro para ejecutar el pipeline MLOps completo
+Script maestro para ejecutar el pipeline MLOps de preparación de datos y entrenamiento
 
 Este script ejecuta todos los pasos del pipeline en secuencia:
 1. Procesamiento de datos (data_processing.py)
 2. Feature Engineering (ft_engineering.py)
 3. Entrenamiento y Evaluación (model_training_evaluation.py)
-4. Monitoreo (model_monitoring.py)
 
-Opcionalmente puede desplegar el modelo y lanzar Streamlit.
+Este script genera los artefactos necesarios para que run_full_system.py pueda
+ejecutar la API y la UI de Streamlit. El monitoreo de drift se realiza en run_full_system.py.
 """
 
 import sys
@@ -62,34 +62,13 @@ def main():
     
     # Configurar argumentos de línea de comandos
     parser = argparse.ArgumentParser(
-        description="Ejecuta el pipeline MLOps completo",
+        description="Ejecuta el pipeline MLOps de preparación de datos y entrenamiento",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Ejemplos de uso:
-  python run_pipeline.py                    # Ejecuta pipeline básico (pasos 1-4)
-  python run_pipeline.py --deploy           # Incluye despliegue de API
-  python run_pipeline.py --streamlit        # Incluye Streamlit
-  python run_pipeline.py --full             # Ejecuta todo (incluye deploy y streamlit)
+  python run_pipeline.py                    # Ejecuta pipeline completo
   python run_pipeline.py --skip-training    # Salta el entrenamiento (útil para testing)
         """
-    )
-    
-    parser.add_argument(
-        '--deploy',
-        action='store_true',
-        help='Incluir despliegue de la API después del pipeline'
-    )
-    
-    parser.add_argument(
-        '--streamlit',
-        action='store_true',
-        help='Lanzar la aplicación Streamlit después del pipeline'
-    )
-    
-    parser.add_argument(
-        '--full',
-        action='store_true',
-        help='Ejecutar pipeline completo incluyendo deploy y streamlit'
     )
     
     parser.add_argument(
@@ -100,14 +79,9 @@ Ejemplos de uso:
     
     args = parser.parse_args()
     
-    # Si se especifica --full, activar todo
-    if args.full:
-        args.deploy = True
-        args.streamlit = True
-    
     # Definir rutas de scripts
     project_root = Path(__file__).parent
-    src_dir = project_root / "mlops_pipeline" / "src" / "Scripts"
+    src_dir = project_root / "mlops_pipeline" / "src" / "scripts"
     
     scripts = [
         (src_dir / "data_processing.py", "PASO 1: Procesamiento de Datos"),
@@ -119,10 +93,6 @@ Ejemplos de uso:
             (src_dir / "model_training_evaluation.py", "PASO 3: Entrenamiento y Evaluación")
         )
     
-    scripts.append(
-        (src_dir / "model_monitoring.py", "PASO 4: Monitoreo de Data Drift")
-    )
-    
     # Banner inicial
     print("\n" + "="*80)
     print("  🚀 PIPELINE MLOPS - ALZHEIMER'S DISEASE PREDICTION")
@@ -131,9 +101,7 @@ Ejemplos de uso:
     print(f"   - Procesamiento de datos: ✓")
     print(f"   - Feature Engineering: ✓")
     print(f"   - Entrenamiento: {'❌ (Saltado)' if args.skip_training else '✓'}")
-    print(f"   - Monitoreo: ✓")
-    print(f"   - Despliegue API: {'✓' if args.deploy else '❌'}")
-    print(f"   - Streamlit: {'✓' if args.streamlit else '❌'}")
+    print("\n💡 Nota: Monitoreo de data drift se ejecutará en run_full_system.py")
     print("\n" + "="*80)
     
     input("\nPresiona ENTER para iniciar el pipeline...")
@@ -152,8 +120,8 @@ Ejemplos de uso:
             print("Por favor, revisa los mensajes de error anteriores.")
             sys.exit(1)
     
-    # Pipeline básico completado
-    print_section("✅ PIPELINE BÁSICO COMPLETADO EXITOSAMENTE")
+    # Pipeline completado
+    print_section("✅ PIPELINE COMPLETADO EXITOSAMENTE")
     
     print("\n📦 Artefactos generados:")
     print("   - data/processed/cleaned_data.csv")
@@ -163,55 +131,18 @@ Ejemplos de uso:
         print("   - artifacts/best_model.joblib")
         print("   - artifacts/model_metadata.json")
         print("   - artifacts/model_evaluation_results.csv")
-    print("   - monitoring_results/drift_report.csv")
-    print("   - monitoring_results/drift_summary.json")
-    
-    # Opciones post-pipeline
-    if args.deploy:
-        print_section("PASO 5: Despliegue de la API")
-        print("🚀 Iniciando servidor de API...")
-        print("   URL: http://localhost:8000")
-        print("   Docs: http://localhost:8000/docs")
-        print("\n⚠️  Presiona CTRL+C para detener el servidor\n")
-        
-        try:
-            subprocess.run(
-                [sys.executable, str(src_dir / "model_deploy.py")],
-                check=True
-            )
-        except KeyboardInterrupt:
-            print("\n\n✅ Servidor de API detenido")
-        except Exception as e:
-            print(f"\n❌ Error al iniciar la API: {e}")
-    
-    if args.streamlit:
-        print_section("PASO 6: Aplicación Streamlit")
-        print("🎨 Iniciando aplicación Streamlit...")
-        print("   La aplicación se abrirá en tu navegador\n")
-        print("⚠️  Presiona CTRL+C para detener Streamlit\n")
-        
-        try:
-            subprocess.run(
-                ["streamlit", "run", str(src_dir / "streamlit_app.py")],
-                check=True
-            )
-        except KeyboardInterrupt:
-            print("\n\n✅ Aplicación Streamlit detenida")
-        except Exception as e:
-            print(f"\n❌ Error al iniciar Streamlit: {e}")
     
     # Mensaje final
     print("\n" + "="*80)
     print("  ✨ PIPELINE COMPLETADO")
     print("="*80)
     
-    if not args.deploy and not args.streamlit:
-        print("\n💡 Próximos pasos:")
-        print("   1. Revisar los artefactos generados en las carpetas artifacts/ y data/processed/")
-        print("   2. Desplegar la API con: python mlops_pipeline/src/model_deploy.py")
-        print("   3. Visualizar resultados con: streamlit run mlops_pipeline/src/streamlit_app.py")
-        print("   4. Construir imagen Docker con: docker build -t alzheimer-api .")
-        print("\n   O ejecuta el pipeline completo con: python run_pipeline.py --full")
+    print("\n💡 Próximos pasos:")
+    print("   1. Ejecutar run_full_system.py para iniciar API y UI")
+    print("      python run_full_system.py")
+    print("\n   2. O ejecutar manualmente:")
+    print("      - API: python mlops_pipeline/src/scripts/model_deploy.py")
+    print("      - UI: streamlit run mlops_pipeline/src/scripts/prediction_ui.py")
     
     print("\n" + "="*80 + "\n")
 
