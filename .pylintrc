@@ -1,0 +1,70 @@
+[MASTER]
+# Directorios a ignorar
+ignore-patterns=test_.*?py,^setup\.py$
+
+# Ignorar directorios específicos
+ignore-paths=__pycache__,.venv,venv,.git
+
+[MESSAGES CONTROL]
+# Desactivar warnings específicos que no nos interesan
+disable=
+    missing-module-docstring,
+    missing-class-docstring,
+    line-too-long,
+
+[FORMAT]
+# Máximo de caracteres por línea (SonarCloud usa 120)
+max-line-length=120
+
+# Máximo número de líneas en un módulo
+max-module-lines=1000
+
+[DESIGN]
+# Máximo número de argumentos en una función
+max-args=5
+
+# Máximo número de atributos en una clase
+max-attributes=7
+
+# Máximo número de variables locales en una función
+max-locals=15
+
+# Máximo de branches en una función (complejidad)
+max-branches=12
+
+# Máximo de statements en una función
+max-statements=50
+
+[BASIC]
+# Nombres de variables
+# good-names=i,j,k,ex,Run,_
+
+# Patrón de nombre para funciones
+function-rgx=[a-z_][a-z0-9_]*$
+
+# Patrón de nombre para constantes
+const-rgx=(([A-Z_][A-Z0-9_]*)|(__.*__)|(_.*))$
+
+[CLASSES]
+# Lista de métodos válidos sin atributos definidos
+defining-attr-methods=__init__,__new__,setUp
+
+[IMPORTS]
+# Orden de importaciones
+preferred-modules=
+
+[REFACTORING]
+# Sugerencias de refactorización
+max-nested-blocks=3
+
+[VARIABLES]
+# Variables definidas en conftest.py que no generan error
+additional-builtins=
+
+[LOGGING]
+# Nivel de logging mínimo considerado
+logging-format-style=new
+
+[SPELLING]
+# Palabras ignoradas
+spelling-ignore-words=

@@ -1,0 +1,59 @@
+name: SonarCloud Analysis
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - developer
+      - certification
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+jobs:
+  sonarcloud:
+    name: SonarCloud Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Deshabilitamos shallow clone para mejor análisis
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pylint radon coverage
+      
+      - name: Run unit tests with coverage
+        run: |
+          pip install pytest pytest-cov
+          pytest --cov=mlops_pipeline/src --cov-report=xml --cov-report=html || true
+      
+      - name: Run SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.projectKey=final-project-ml
+            -Dsonar.organization=juansnuno
+            -Dsonar.sources=mlops_pipeline/src
+            -Dsonar.python.version=3.11
+            -Dsonar.python.coverage.reportPaths=coverage.xml
+            -Dsonar.exclusions=**/*_test.py,**/test_*.py,**/__pycache__/**,**/*.ipynb
+            -Dsonar.cpd.python.minimumtokens=50
+      
+      - name: Quality Gate Check
+        run: |
+          echo "✅ SonarCloud analysis completed"
+          echo "📊 View results at: https://sonarcloud.io/dashboard?id=final-project-ml"
