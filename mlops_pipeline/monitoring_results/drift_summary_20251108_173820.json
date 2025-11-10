@@ -1,9 +1,0 @@
-{
-    "timestamp": "2025-11-08T17:38:20.422789",
-    "total_features": 32,
-    "drift_summary": {
-        "Sin drift": 31,
-        "Drift moderado": 1
-    },
-    "features_with_significant_drift": []
-}
