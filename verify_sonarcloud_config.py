@@ -182,7 +182,11 @@ def check_python_files():
     if py_files:
         print("\n   Archivos Python a analizar:")
         for py_file in sorted(py_files)[:10]:  # Mostrar solo los primeros 10
-            rel_path = py_file.relative_to(Path.cwd())
+            try:
+                rel_path = py_file.relative_to(Path.cwd())
+            except ValueError:
+                # Si no se puede obtener la ruta relativa, usar el nombre del archivo
+                rel_path = py_file
             print(f"      - {rel_path}")
         
         if len(py_files) > 10:
