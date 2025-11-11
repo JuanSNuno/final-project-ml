@@ -127,7 +127,26 @@ def load_monitoring_results():
     import pathlib
     
     script_dir = pathlib.Path(__file__).parent.parent.parent
-    monitoring_dir = script_dir / "monitoring_results"
+    
+    # Buscar en múltiples ubicaciones (local y Docker)
+    possible_monitoring_dirs = [
+        script_dir / "monitoring_results",
+        pathlib.Path("/app/monitoring_results"),  # Docker
+        pathlib.Path("./mlops_pipeline/monitoring_results"),  # Local alternativo
+    ]
+    
+    monitoring_dir = None
+    for dir_path in possible_monitoring_dirs:
+        if dir_path.exists():
+            monitoring_dir = dir_path
+            break
+    
+    if monitoring_dir is None:
+        st.warning(f"⚠️ No se encontró el directorio de monitoreo en las ubicaciones esperadas:")
+        st.warning("   - mlops_pipeline/monitoring_results")
+        st.warning("   - /app/monitoring_results (Docker)")
+        st.info("💡 Ejecuta primero model_monitoring.py para generar los reportes")
+        return None, None
     
     # Cargar reporte de drift (CSV)
     drift_report_path = monitoring_dir / "drift_report.csv"
@@ -135,10 +154,12 @@ def load_monitoring_results():
     if not drift_report_path.exists():
         st.warning(f"⚠️ No se encontró el reporte de drift: {drift_report_path}")
         st.info("💡 Ejecuta primero model_monitoring.py para generar los reportes")
+        st.info("   Comando: python mlops_pipeline/src/scripts/model_monitoring.py")
         return None, None
     
     try:
         drift_results = pd.read_csv(drift_report_path)
+        st.success(f"✅ Reporte de drift cargado: {drift_report_path}")
     except Exception as e:
         st.error(f"❌ Error al cargar reporte de drift: {e}")
         return None, None
@@ -151,6 +172,7 @@ def load_monitoring_results():
         try:
             with open(drift_summary_path, 'r') as f:
                 drift_summary = json.load(f)
+                st.success(f"✅ Resumen de drift cargado")
         except Exception as e:
             st.warning(f"⚠️ No se pudo cargar el resumen: {e}")
     
@@ -161,25 +183,32 @@ def load_monitoring_results():
 def load_data():
     """Cargar datos originales para visualización complementaria"""
     import pathlib
+    import os
     
     script_dir = pathlib.Path(__file__).parent.parent.parent
     
-    # Intentar cargar datos limpios
-    cleaned_data_path = script_dir / "data" / "processed" / "cleaned_data.csv"
+    # OPCIÓN 1: Cargar datos limpios (prioridad)
+    possible_cleaned_paths = [
+        script_dir / "data" / "processed" / "cleaned_data.csv",
+        pathlib.Path("/app/data/processed/cleaned_data.csv"),  # Docker
+        pathlib.Path("./mlops_pipeline/data/processed/cleaned_data.csv"),  # Local
+    ]
     
-    if cleaned_data_path.exists():
-        try:
-            df_full = pd.read_csv(cleaned_data_path)
-            # Simular datos históricos y actuales para gráficos
-            split_point = int(len(df_full) * 0.8)
-            df_reference = df_full.iloc[:split_point].copy()
-            df_current = df_full.iloc[split_point:].copy()
-            return df_reference, df_current, df_full
-        except Exception as e:
-            st.error(f"❌ Error al cargar datos: {e}")
-            return None, None, None
+    for cleaned_data_path in possible_cleaned_paths:
+        if cleaned_data_path.exists():
+            try:
+                df_full = pd.read_csv(cleaned_data_path)
+                # Simular datos históricos y actuales para gráficos
+                split_point = int(len(df_full) * 0.8)
+                df_reference = df_full.iloc[:split_point].copy()
+                df_current = df_full.iloc[split_point:].copy()
+                st.info(f"✅ Datos cargados desde: {cleaned_data_path}")
+                return df_reference, df_current, df_full
+            except Exception as e:
+                st.warning(f"⚠️ Error al cargar datos de {cleaned_data_path}: {e}")
+                continue
     
-    # Fallback a datos originales
+    # OPCIÓN 2: Fallback a datos originales
     config_path = script_dir / "config.json"
     data_path = None
     
@@ -192,18 +221,27 @@ def load_data():
         except Exception:
             pass
     
+    # OPCIÓN 3: Buscar en múltiples ubicaciones
     if data_path is None or not pathlib.Path(data_path).exists():
         possible_paths = [
             script_dir / "alzheimers_disease_data.csv",
             script_dir / "Base_de_datos.csv",
+            pathlib.Path("/app/alzheimers_disease_data.csv"),  # Docker
+            pathlib.Path("./alzheimers_disease_data.csv"),  # Local
         ]
         for path in possible_paths:
             if path.exists():
                 data_path = path
                 break
     
+    # Si no se encuentran datos, mostrar error
     if data_path is None or not pathlib.Path(data_path).exists():
-        st.error(f"❌ No se encontró el archivo de datos")
+        st.error(f"❌ No se encontró el archivo de datos en las ubicaciones esperadas:")
+        st.error("   - mlops_pipeline/data/processed/cleaned_data.csv")
+        st.error("   - /app/data/processed/cleaned_data.csv (Docker)")
+        st.error("   - alzheimers_disease_data.csv")
+        st.error("   - Base_de_datos.csv")
+        st.info("💡 Por favor ejecuta primero el pipeline de procesamiento de datos")
         return None, None, None
     
     try:
@@ -211,6 +249,7 @@ def load_data():
         split_point = int(len(df_full) * 0.8)
         df_reference = df_full.iloc[:split_point].copy()
         df_current = df_full.iloc[split_point:].copy()
+        st.info(f"✅ Datos cargados desde: {data_path}")
         return df_reference, df_current, df_full
     except Exception as e:
         st.error(f"❌ Error al cargar datos: {e}")
@@ -331,8 +370,12 @@ with st.spinner('Cargando resultados del monitoreo...'):
         # Ajustar tipos
         drift_df['Tipo'] = drift_df['Tipo'].replace({'numeric': 'Numérica', 'categorical': 'Categórica'})
         
-        # Cargar datos originales para visualización
+        # Cargar datos originales para visualización (opcional con reportes)
         df_reference, df_current, df_full = load_data()
+        
+        # Si no se pueden cargar datos, continuar solo con reportes
+        if df_reference is None:
+            st.warning("⚠️ No se pudieron cargar los datos originales. Mostrando solo estadísticas del reporte.")
         
     else:
         # Modo legacy: calcular drift en tiempo real
@@ -533,51 +576,56 @@ with tab2:
             with col4:
                 st.metric("JS Divergence", f"{var_info['JS_Divergence']:.4f}")
             
-            # Gráfico de distribución
-            fig, axes = plt.subplots(1, 2, figsize=(14, 5))
-            
-            ref_data = df_reference[selected_var].dropna()
-            cur_data = df_current[selected_var].dropna()
-            
-            # Histogramas
-            axes[0].hist(ref_data, bins=30, alpha=0.6, label='Referencia', color='blue', density=True)
-            axes[0].hist(cur_data, bins=30, alpha=0.6, label='Actual', color='red', density=True)
-            axes[0].set_xlabel(selected_var, fontweight='bold')
-            axes[0].set_ylabel('Densidad', fontweight='bold')
-            axes[0].set_title(f'Distribución: {selected_var}', fontsize=12, fontweight='bold')
-            axes[0].legend()
-            axes[0].grid(alpha=0.3)
-            
-            # Boxplots
-            data_to_plot = [ref_data, cur_data]
-            axes[1].boxplot(data_to_plot, labels=['Referencia', 'Actual'])
-            axes[1].set_ylabel(selected_var, fontweight='bold')
-            axes[1].set_title(f'Boxplot: {selected_var}', fontsize=12, fontweight='bold')
-            axes[1].grid(alpha=0.3)
-            
-            plt.tight_layout()
-            st.pyplot(fig)
-            
-            # Estadísticas
-            st.subheader("Estadísticas Descriptivas")
-            stats_df = pd.DataFrame({
-                'Métrica': ['Media', 'Mediana', 'Desv. Estándar', 'Mínimo', 'Máximo'],
-                'Referencia': [
-                    f"{ref_data.mean():.2f}",
-                    f"{ref_data.median():.2f}",
-                    f"{ref_data.std():.2f}",
-                    f"{ref_data.min():.2f}",
-                    f"{ref_data.max():.2f}"
-                ],
-                'Actual': [
-                    f"{cur_data.mean():.2f}",
-                    f"{cur_data.median():.2f}",
-                    f"{cur_data.std():.2f}",
-                    f"{cur_data.min():.2f}",
-                    f"{cur_data.max():.2f}"
-                ]
-            })
-            st.dataframe(stats_df, use_container_width=True)
+            # Verificar si hay datos disponibles para graficar
+            if df_reference is not None and df_current is not None and selected_var in df_reference.columns and selected_var in df_current.columns:
+                # Gráfico de distribución
+                fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+                
+                ref_data = df_reference[selected_var].dropna()
+                cur_data = df_current[selected_var].dropna()
+                
+                # Histogramas
+                axes[0].hist(ref_data, bins=30, alpha=0.6, label='Referencia', color='blue', density=True)
+                axes[0].hist(cur_data, bins=30, alpha=0.6, label='Actual', color='red', density=True)
+                axes[0].set_xlabel(selected_var, fontweight='bold')
+                axes[0].set_ylabel('Densidad', fontweight='bold')
+                axes[0].set_title(f'Distribución: {selected_var}', fontsize=12, fontweight='bold')
+                axes[0].legend()
+                axes[0].grid(alpha=0.3)
+                
+                # Boxplots
+                data_to_plot = [ref_data, cur_data]
+                axes[1].boxplot(data_to_plot, labels=['Referencia', 'Actual'])
+                axes[1].set_ylabel(selected_var, fontweight='bold')
+                axes[1].set_title(f'Boxplot: {selected_var}', fontsize=12, fontweight='bold')
+                axes[1].grid(alpha=0.3)
+                
+                plt.tight_layout()
+                st.pyplot(fig)
+                
+                # Estadísticas
+                st.subheader("Estadísticas Descriptivas")
+                stats_df = pd.DataFrame({
+                    'Métrica': ['Media', 'Mediana', 'Desv. Estándar', 'Mínimo', 'Máximo'],
+                    'Referencia': [
+                        f"{ref_data.mean():.2f}",
+                        f"{ref_data.median():.2f}",
+                        f"{ref_data.std():.2f}",
+                        f"{ref_data.min():.2f}",
+                        f"{ref_data.max():.2f}"
+                    ],
+                    'Actual': [
+                        f"{cur_data.mean():.2f}",
+                        f"{cur_data.median():.2f}",
+                        f"{cur_data.std():.2f}",
+                        f"{cur_data.min():.2f}",
+                        f"{cur_data.max():.2f}"
+                    ]
+                })
+                st.dataframe(stats_df, use_container_width=True)
+            else:
+                st.info("📊 Datos de distribución no disponibles. Las métricas PSI/JS se calcularon durante el monitoreo.")
+                st.info("💡 Para ver gráficos de distribución, asegúrate de que los datos estén disponibles en `/app/data/processed/`")
         
         else:  # Categórica
             with col3:

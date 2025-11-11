@@ -313,107 +313,6 @@ pause
     time.sleep(3)
     return True
 
-def show_control_panel():
-    """Muestra un panel de control con los servicios disponibles"""
-    while True:
-        os.system('cls' if platform.system() == 'Windows' else 'clear')
-        
-        print("\n" + "="*70)
-        print("  🧠 ALZHEIMER PREDICTION SYSTEM - PANEL DE CONTROL")
-        print("="*70)
-        
-        print("\n✅ SERVICIOS ACTIVOS:")
-        print("\n  1️⃣  API FastAPI")
-        print("      📍 URL: http://localhost:8000")
-        print("      📖 Documentación: http://localhost:8000/docs")
-        print("      🏥 Health Check: http://localhost:8000/health")
-        
-        print("\n  2️⃣  UI Predicción (Streamlit)")
-        print("      📍 URL: http://localhost:8501")
-        print("      💡 Haz predicciones sobre Alzheimer")
-        
-        print("\n  3️⃣  UI Reporte Drift (Streamlit)")
-        print("      📍 URL: http://localhost:8502")
-        print("      📊 Monitorea data drift y cambios en los datos")
-        
-        print("\n" + "="*70)
-        print("🎯 ACCIONES DISPONIBLES:")
-        print("="*70)
-        
-        print("\n  [1] Abrir API en navegador")
-        print("  [2] Abrir UI Predicción en navegador")
-        print("  [3] Abrir UI Reporte Drift en navegador")
-        print("  [4] Abrir todas las UIs")
-        print("  [0] Salir (detener todos los servicios)")
-        print("\n")
-        
-        choice = input("Selecciona una opción (0-4): ").strip()
-        
-        if choice == "1":
-            print("\n🌐 Abriendo API en navegador...")
-            if platform.system() == "Windows":
-                os.startfile("http://localhost:8000/docs")
-            elif platform.system() == "Darwin":
-                os.system("open http://localhost:8000/docs")
-            else:
-                os.system("xdg-open http://localhost:8000/docs &")
-            time.sleep(2)
-        
-        elif choice == "2":
-            print("\n🌐 Abriendo UI Predicción en navegador...")
-            if platform.system() == "Windows":
-                os.startfile("http://localhost:8501")
-            elif platform.system() == "Darwin":
-                os.system("open http://localhost:8501")
-            else:
-                os.system("xdg-open http://localhost:8501 &")
-            time.sleep(2)
-        
-        elif choice == "3":
-            print("\n🌐 Abriendo UI Reporte Drift en navegador...")
-            if platform.system() == "Windows":
-                os.startfile("http://localhost:8502")
-            elif platform.system() == "Darwin":
-                os.system("open http://localhost:8502")
-            else:
-                os.system("xdg-open http://localhost:8502 &")
-            time.sleep(2)
-        
-        elif choice == "4":
-            print("\n🌐 Abriendo todas las UIs en navegador...")
-            time.sleep(1)
-            
-            if platform.system() == "Windows":
-                os.startfile("http://localhost:8000/docs")
-                time.sleep(1)
-                os.startfile("http://localhost:8501")
-                time.sleep(1)
-                os.startfile("http://localhost:8502")
-            elif platform.system() == "Darwin":
-                os.system("open http://localhost:8000/docs")
-                time.sleep(1)
-                os.system("open http://localhost:8501")
-                time.sleep(1)
-                os.system("open http://localhost:8502")
-            else:
-                os.system("xdg-open http://localhost:8000/docs &")
-                time.sleep(1)
-                os.system("xdg-open http://localhost:8501 &")
-                time.sleep(1)
-                os.system("xdg-open http://localhost:8502 &")
-            
-            time.sleep(2)
-        
-        elif choice == "0":
-            print("\n⏹️  Deteniendo todos los servicios...")
-            return False
-        
-        else:
-            print("\n❌ Opción no válida. Intenta de nuevo.")
-            time.sleep(2)
-    
-    return True
-
 def main():
     """Función principal"""
     try:
@@ -461,17 +360,9 @@ def main():
         print_service_info("Streamlit - Predicción", 8501, "http://localhost:8501")
         print_service_info("Streamlit - Reporte Drift", 8502, "http://localhost:8502")
         
-        print("\n" + "="*70)
-        print("💡 PRÓXIMOS PASOS:")
-        print("="*70)
-        print("  Se abrirá un panel de control interactivo")
-        print("  Desde allí podrás acceder a todos los servicios con un click")
-        print("\n  Presiona ENTER para continuar al panel de control...")
-        
         input()
         
         # Mostrar panel de control
-        show_control_panel()
         
         print("\n⏹️  Sistema detenido")
         

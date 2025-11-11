@@ -11,7 +11,8 @@ services:
     # Puertos expuestos
     ports:
       - "8000:8000"    # API FastAPI
-      - "8501:8501"    # Streamlit UI
+      - "8501:8501"    # Streamlit UI - Predicción
+      - "8502:8502"    # Streamlit UI - Reporte de Drift
     
     # Variables de entorno
     environment:
@@ -26,6 +27,8 @@ services:
       - ./mlops_pipeline/artifacts:/app/artifacts:ro
       # Para resultados de monitoreo
       - ./mlops_pipeline/monitoring_results:/app/monitoring_results
+      # Para datos procesados (drift monitoring)
+      - ./mlops_pipeline/data:/app/data:ro
     
     # Política de reinicio
     restart: unless-stopped
