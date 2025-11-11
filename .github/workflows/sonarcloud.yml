@@ -37,21 +37,34 @@ jobs:
         run: |
           pip install pytest pytest-cov
           pytest --cov=mlops_pipeline/src --cov-report=xml --cov-report=html || true
+        continue-on-error: true
+      
+      - name: Check SONAR_TOKEN
+        run: |
+          if [ -z "${{ secrets.SONAR_TOKEN }}" ]; then
+            echo "❌ ERROR: SONAR_TOKEN is not configured"
+            echo "Please follow the setup guide in docs/SONARCLOUD_SETUP.md"
+            exit 1
+          else
+            echo "✅ SONAR_TOKEN is configured"
+          fi
       
       - name: Run SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@master
+        uses: SonarSource/sonarqube-scan-action@v5.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
         with:
           args: >
-            -Dsonar.projectKey=final-project-ml
+            -Dsonar.projectKey=JuanSNuno_final-project-ml
             -Dsonar.organization=juansnuno
             -Dsonar.sources=mlops_pipeline/src
             -Dsonar.python.version=3.11
             -Dsonar.python.coverage.reportPaths=coverage.xml
             -Dsonar.exclusions=**/*_test.py,**/test_*.py,**/__pycache__/**,**/*.ipynb
             -Dsonar.cpd.python.minimumtokens=50
+            -Dsonar.verbose=false
       
       - name: Quality Gate Check
         run: |
