@@ -73,9 +73,9 @@ final-project-ml/
         │   ├── comprension_eda.ipynb
         │   ├── ft_engineering.ipynb
         │   ├── model_training.ipynb
-        │   ├── model_evaluation.ipynb
-        │   ├── model_deploy.ipynb
-        │   └── model_monitoring.ipynb
+        │   ├── model_monitoring.ipynb
+        │   
+        │   
         │
         └── 🎯 scripts/                   # ⚙️ Corazón del pipeline MLOps
             ├── data_processing.py
