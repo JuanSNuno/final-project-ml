@@ -40,8 +40,10 @@ jobs:
         continue-on-error: true
       
       - name: Check SONAR_TOKEN
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          if [ -z "${{ secrets.SONAR_TOKEN }}" ]; then
+          if [ -z "$SONAR_TOKEN" ]; then
             echo "❌ ERROR: SONAR_TOKEN is not configured"
             echo "Please follow the setup guide in docs/SONARCLOUD_SETUP.md"
             exit 1
